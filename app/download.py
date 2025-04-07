@@ -49,6 +49,9 @@ def download_video(url: str, quality: str = '1080', file_format: str = 'mp4') ->
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
 
+            if not info:
+                raise RuntimeError("Failed to extract video information.")
+
         filepath = os.path.expanduser(f"~/Downloads/{video_id}.{extension}")
 
         metadata = {
