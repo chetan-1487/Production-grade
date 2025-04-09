@@ -12,6 +12,15 @@ celery_app = Celery(
     backend="redis://localhost:6379/0"
 )
 
+QUALITY_MAP = {
+    "360p": 360,
+    "480p": 480,
+    "720p": 720,
+    "1080p": 1080,
+    "4K": 2160
+}
+
+
 #var list=[360p, 480p, 720p, 1080p, 4K]
 
 # Save to Desktop/Downloads
@@ -24,7 +33,7 @@ if not in list:
 '''
 
 @celery_app.task(name="download_video_task")
-def download_video(url: str, quality: str = '1080', file_format: str = 'mp4') -> tuple:
+def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -> tuple:
     video_id = str(uuid.uuid4())
     extension = "mp3" if file_format == "mp3" else file_format
     output_path = os.path.join(BASE_DOWNLOAD_DIR, f"{video_id}.%(ext)s")
@@ -42,10 +51,10 @@ def download_video(url: str, quality: str = '1080', file_format: str = 'mp4') ->
             'quiet': True,
         }
     else:
-        try:
-            int_quality = int(quality)
-        except ValueError:
-            raise RuntimeError(f"Invalid quality value: {quality}. Must be 360, 480, 720, 1080, etc.")
+        if quality not in QUALITY_MAP:
+            raise RuntimeError(f"Invalid quality value: {quality}. Must be 360p, 480p, 720p, 1080p, 4Ketc.")
+    
+        int_quality = QUALITY_MAP[quality]
 
         format_string = (
             f"bestvideo[height<={int_quality}][ext={file_format}]+"
