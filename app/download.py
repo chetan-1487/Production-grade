@@ -4,11 +4,26 @@ from yt_dlp import YoutubeDL
 from datetime import datetime
 from typing import Dict, Tuple
 from sqlalchemy.orm import Session
+from celery import Celery
+
+celery_app = Celery(
+    "worker",
+    broker="redis://localhost:6379/0",
+    backend="redis://localhost:6379/0"
+)
+
+#var list=[360p, 480p, 720p, 1080p, 4K]
 
 # Save to Desktop/Downloads
 BASE_DOWNLOAD_DIR = os.path.expanduser("~/Downloads")
 os.makedirs(BASE_DOWNLOAD_DIR, exist_ok=True)
 
+'''
+if not in list:
+    raise RuntimeError(f"Invalid quality value: {quality}. Must be 360, 480, 720, 1080, etc.")
+'''
+
+@celery_app.task(name="download_video_task")
 def download_video(url: str, quality: str = '1080', file_format: str = 'mp4') -> tuple:
     video_id = str(uuid.uuid4())
     extension = "mp3" if file_format == "mp3" else file_format
@@ -73,3 +88,6 @@ def download_video(url: str, quality: str = '1080', file_format: str = 'mp4') ->
 def format_duration(seconds: int) -> str:
     mins, secs = divmod(seconds, 60)
     return f"{mins}m{secs}s"
+
+
+# download_video("https://www.youtube.com/watch?v=-mgGnx1p3b8&list=RDMMcl0a3i2wFcc&index=3","1080","mp4")

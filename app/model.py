@@ -5,11 +5,12 @@ import uuid
 from sqlalchemy.dialects.postgresql import UUID
 
 
-# class User(Base):
-#     __tablename__="users"
-#     id=Column(UUID(as_uuid=True),primary_key=True,default=uuid.uuid4)
-#     email=Column(String,nullable=False,unique=True)
-#     password=Column(String,nullable=False)
+class User(Base):
+    __tablename__="users"
+    id=Column(UUID(as_uuid=True),primary_key=True,default=uuid.uuid4)
+    email=Column(String,nullable=False,unique=True)
+    password=Column(String,nullable=False)
+    created_at=Column(DateTime,default=datetime.now())
 
 class VideoMetadata(Base):
     __tablename__="video_metadata"
@@ -22,11 +23,12 @@ class VideoMetadata(Base):
     thumbnail_url=Column(String,nullable=False)
     published_date=Column(String,nullable=False)
     created_at=Column(DateTime,default=datetime.now())
+    user_id=Column(UUID(as_uuid=True),ForeignKey("users.id",ondelete="CASCADE"))
 
 
 class DownloadHistory(Base):
     __tablename__="download_history"
-    id=Column(Integer,primary_key=True,nullable=False)
+    id=Column(UUID(as_uuid=True),primary_key=True)
     status=Column(String,nullable=False)
-    video_id=Column(UUID(as_uuid=True),ForeignKey("video_metadata.id",ondelete="CASCADE"),nullable=False)
+    video_id=Column(UUID(as_uuid=True),ForeignKey("video_metadata.id",ondelete="CASCADE"))
     download_date=Column(DateTime,default=datetime.now())
