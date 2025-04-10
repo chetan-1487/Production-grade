@@ -1,16 +1,18 @@
 from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter,Query
-from .. import model, auth2
+
+from ..Database.models import model
+from ..Core import auth2
 from sqlalchemy.orm import Session
-from ..database import get_db
+from ..Database.database import get_db
 from typing import List
-from ..metadata import DownloadRequest
-from ..download import download_video
+from ..Schema.metadata import DownloadRequest
+from ..Core.Service.download import download_video
 import os
-from app.model import VideoMetadata,DownloadHistory
+from app.Database.models.model import VideoMetadata,DownloadHistory
 from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, HttpUrl
-from ..metadata import VideoMetadataResponse
+from ..Schema.metadata import VideoMetadataResponse
 
 router=APIRouter(
     tags=['User Information']
@@ -61,6 +63,8 @@ async def download(request: DownloadRequest, db: Session = Depends(get_db),curre
     # db.commit()
 
     return{
+        "Status":"Success",
+        "filepath": filepath,
         "title": metadata.title,
         "duration": metadata.duration,
         "views": metadata.views,

@@ -3,7 +3,6 @@ import uuid
 from yt_dlp import YoutubeDL
 from datetime import datetime
 from typing import Dict, Tuple
-from sqlalchemy.orm import Session
 from celery import Celery
 
 celery_app = Celery(
@@ -52,7 +51,7 @@ def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -
         }
     else:
         if quality not in QUALITY_MAP:
-            raise RuntimeError(f"Invalid quality value: {quality}. Must be 360p, 480p, 720p, 1080p, 4Ketc.")
+            raise RuntimeError(f"Invalid quality value: {quality}. Must be 360p, 480p, 720p, 1080p, 4K etc.")
     
         int_quality = QUALITY_MAP[quality]
 

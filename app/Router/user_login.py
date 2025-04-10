@@ -1,7 +1,11 @@
 from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
-from .. import model,metadata,utils,auth2
+
+from ..Database.models import model
+from ..Schema import metadata
+from ..Utils import utils
+from ..Core import auth2
+from ..Database.database import get_db
 from sqlalchemy.orm import Session
-from ..database import get_db
 from typing import List
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 
