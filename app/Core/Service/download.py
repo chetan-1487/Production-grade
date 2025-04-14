@@ -4,12 +4,8 @@ from yt_dlp import YoutubeDL
 from datetime import datetime
 from typing import Dict, Tuple
 from celery import Celery
+from ...Schema.metadata import Userout
 
-celery_app = Celery(
-    "worker",
-    broker="redis://localhost:6379/0",
-    backend="redis://localhost:6379/0"
-)
 
 QUALITY_MAP = {
     "360p": 360,
@@ -31,7 +27,7 @@ if not in list:
     raise RuntimeError(f"Invalid quality value: {quality}. Must be 360, 480, 720, 1080, etc.")
 '''
 
-@celery_app.task(name="download_video_task")
+# @celery_app.task(name="download_video_task")
 def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -> tuple:
     video_id = str(uuid.uuid4())
     extension = "mp3" if file_format == "mp3" else file_format
@@ -76,7 +72,7 @@ def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -
                 raise RuntimeError("Failed to extract video information.")
 
         filepath = os.path.expanduser(f"~/Downloads/{video_id}.{extension}")
-
+       
         metadata = {
             "id": video_id,
             "title": info.get("title"),
@@ -85,7 +81,7 @@ def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -
             "likes": info.get("like_count", 0),
             "channel": info.get("uploader"),
             "thumbnail_url": info.get("thumbnail"),
-            "published_date": datetime.strptime(info.get("upload_date", "19700101"), "%Y%m%d").date(),
+            "published_date": datetime.strptime(info.get("upload_date", "19700101"), "%Y%m%d").date()
         }
 
         return filepath, metadata

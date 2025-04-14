@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter,Query
-
+from app.Database.models.model import User
 from ..Database.models import model
 from ..Core import auth2
 from sqlalchemy.orm import Session
@@ -18,9 +18,22 @@ router=APIRouter(
     tags=['User Information']
 )
 
-# @router.get("/history")
-# def get_download_history(db: Session = Depends(get_db),current_user:int=Depends(auth2.get_current_user)):
-   
+@router.get("/history")
+def get_download_history(db: Session = Depends(get_db),current_user:int=Depends(auth2.get_current_user)):
+    history = db.query(DownloadHistory).all()
+
+    if not history:
+        raise HTTPException(status_code=404, detail="No download history found")
+
+    return [
+        {
+            "url": item.url,
+            "status": item.status,
+            "download_at": item.download_at,
+            "download_url": item.download_url,
+        }
+        for item in history
+    ]
 
 
 # @router.get("/metadata", response_model=VideoMetadataResponse)
@@ -41,7 +54,7 @@ router=APIRouter(
 #     }
 
 @router.post("/download")
-async def download(request: DownloadRequest, db: Session = Depends(get_db),current_user:int=Depends(auth2.get_current_user)):
+async def download(request: DownloadRequest, db: Session = Depends(get_db),current_user:User=Depends(auth2.get_current_user)):
     filepath, metadata_dict = download_video(request.url, request.quality, request.format)
 
     if not filepath:
@@ -49,18 +62,24 @@ async def download(request: DownloadRequest, db: Session = Depends(get_db),curre
 
     # Store metadata in DB
     metadata = VideoMetadata(**metadata_dict)
+    metadata.user_id=current_user.id
     db.add(metadata)
     db.commit()
     db.refresh(metadata)
 
-    #Store metadata in DownloadHistory
-    # history = DownloadHistory(
-    #     video_id=metadata.id,
-    #     status="Success",
-    #     download_date=datetime.utcnow()
-    # )
-    # db.add(history)
-    # db.commit()
+    print(current_user)
+
+    # Store metadata in DownloadHistory
+    history = DownloadHistory(
+        url=request.url,
+        video_id=metadata_dict["id"],
+        status="Success",
+        download_at=datetime.utcnow(),
+        download_url=filepath
+    )
+    db.add(history)
+    db.commit()
+    db.refresh(history)
 
     return{
         "Status":"Success",
