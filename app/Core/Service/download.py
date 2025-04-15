@@ -42,7 +42,7 @@ def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
-            'noplaylist': True,
+            'noplaylist': False,
             'quiet': True,
         }
     else:
@@ -60,9 +60,8 @@ def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -
             'format': format_string,
             'outtmpl': output_path,
             'merge_output_format': file_format,
-            'noplaylist': True,
+            'noplaylist': False,
             'quiet': True,
-            "socket_timeout":120,
         }
 
     try:

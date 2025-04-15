@@ -34,4 +34,5 @@ class DownloadHistory(Base):
     download_url=Column(Text,nullable=False)
     status=Column(String,nullable=False)
     video_id=Column(UUID(as_uuid=True),ForeignKey("video_metadata.id",ondelete="CASCADE"),nullable=False)
+    user_id=Column(UUID(as_uuid=True),ForeignKey("users.id",ondelete="CASCADE"),nullable=False)
     download_at=Column(DateTime,default=datetime.now())

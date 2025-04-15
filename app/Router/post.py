@@ -6,7 +6,14 @@ from ..Database.database import get_db
 from ..Schema.metadata import DownloadRequest
 from ..Core.Service.download import download_video
 from app.Database.models.model import VideoMetadata,DownloadHistory
-from datetime import datetime
+from datetime import datetime,timedelta
+from dotenv import load_dotenv
+import os
+from sqlalchemy import func, and_
+
+load_dotenv()
+
+DOWNLOAD_LIMIT = int(os.getenv("DOWNLOAD_LIMIT_PER_DAY"))
 
 router=APIRouter(
     tags=['User Information']
@@ -49,10 +56,30 @@ def get_download_history(db: Session = Depends(get_db),current_user:int=Depends(
 
 @router.post("/download")
 async def download(request: DownloadRequest, db: Session = Depends(get_db),current_user:User=Depends(auth2.get_current_user)):
+
+    today = datetime.utcnow().date()
+    start_of_day = datetime(today.year, today.month, today.day)
+    end_of_day = start_of_day + timedelta(days=1)
+
+    # 2. Count user’s downloads today
+    download_count = db.query(func.count(DownloadHistory.id)).filter(
+        and_(
+            DownloadHistory.user_id == current_user.id,
+            DownloadHistory.download_at >= start_of_day,
+            DownloadHistory.download_at < end_of_day
+        )
+    ).scalar()
+
+    if download_count >= DOWNLOAD_LIMIT:
+        raise HTTPException(
+            status_code=403,
+            detail="Daily download limit reached. Login with another account or try again tomorrow."
+        )
+
     task_result = download_video.delay(request.url, request.quality, request.format)
 
     try:
-        result = task_result.get(timeout=120)
+        result = task_result.get(timeout=99999999999)
         filepath, metadata_dict = result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error downloading video: {str(e)}")
@@ -67,7 +94,7 @@ async def download(request: DownloadRequest, db: Session = Depends(get_db),curre
     db.commit()
     db.refresh(metadata)
 
-    print(current_user)
+    # print(current_user)
 
     # Store metadata in DownloadHistory
     history = DownloadHistory(
@@ -77,6 +104,7 @@ async def download(request: DownloadRequest, db: Session = Depends(get_db),curre
         download_at=datetime.utcnow(),
         download_url=filepath
     )
+    history.user_id=current_user.id
     db.add(history)
     db.commit()
     db.refresh(history)

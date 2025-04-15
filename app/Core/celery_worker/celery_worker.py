@@ -1,9 +1,13 @@
 from celery import Celery
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 celery_app = Celery(
     "worker",
-    broker="redis://localhost:6379/0",
-    backend="redis://localhost:6379/0"
+    broker=os.getenv("BROKER"),
+    backend=os.getenv("BACKEND")
 )
 
 celery_app.autodiscover_tasks([
