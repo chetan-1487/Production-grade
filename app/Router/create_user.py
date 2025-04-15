@@ -26,7 +26,6 @@ def create_user(user:metadata.UserCreate,db:Session=Depends(get_db)):
 @router.get("/{id}",response_model=metadata.Userout)
 def get_user(id:str, db:Session=Depends(get_db)):
     user = db.query(model.User).filter(model.User.id==id).first()
-    print(user)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"User with id:{id} doesnot exist")
      

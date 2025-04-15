@@ -3,8 +3,8 @@ import uuid
 from yt_dlp import YoutubeDL
 from datetime import datetime
 from typing import Dict, Tuple
-from celery import Celery
-from ...Schema.metadata import Userout
+from app.Core.celery_worker.celery_worker import celery_app
+
 
 
 QUALITY_MAP = {
@@ -27,7 +27,7 @@ if not in list:
     raise RuntimeError(f"Invalid quality value: {quality}. Must be 360, 480, 720, 1080, etc.")
 '''
 
-# @celery_app.task(name="download_video_task")
+@celery_app.task(name="app.Core.Service.download.download_video")
 def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -> tuple:
     video_id = str(uuid.uuid4())
     extension = "mp3" if file_format == "mp3" else file_format
@@ -62,6 +62,7 @@ def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -
             'merge_output_format': file_format,
             'noplaylist': True,
             'quiet': True,
+            "socket_timeout":120,
         }
 
     try:

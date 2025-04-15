@@ -1,18 +1,12 @@
 from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter,Query
 from app.Database.models.model import User
-from ..Database.models import model
 from ..Core import auth2
 from sqlalchemy.orm import Session
 from ..Database.database import get_db
-from typing import List
 from ..Schema.metadata import DownloadRequest
 from ..Core.Service.download import download_video
-import os
 from app.Database.models.model import VideoMetadata,DownloadHistory
 from datetime import datetime
-from uuid import UUID
-from pydantic import BaseModel, HttpUrl
-from ..Schema.metadata import VideoMetadataResponse
 
 router=APIRouter(
     tags=['User Information']
@@ -55,7 +49,13 @@ def get_download_history(db: Session = Depends(get_db),current_user:int=Depends(
 
 @router.post("/download")
 async def download(request: DownloadRequest, db: Session = Depends(get_db),current_user:User=Depends(auth2.get_current_user)):
-    filepath, metadata_dict = download_video(request.url, request.quality, request.format)
+    task_result = download_video.delay(request.url, request.quality, request.format)
+
+    try:
+        result = task_result.get(timeout=120)
+        filepath, metadata_dict = result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error downloading video: {str(e)}")
 
     if not filepath:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Download failed")

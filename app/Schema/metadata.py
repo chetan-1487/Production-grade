@@ -5,12 +5,12 @@ from uuid import UUID as uuid
 import re
 
 
-YOUTUBE_URL_REGEX = re.compile(r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/(watch\?v=)?[\w\-]{11}$")
+YOUTUBE_URL_REGEX = re.compile(
+    r"^(https?://)?(www\.)?(youtube\.com|youtu\.be)/(watch\?v=)?[\w\-]{11}(&[a-zA-Z0-9_]+=[a-zA-Z0-9_&\-]*)*$"
+)
 YOUTUBE_PLAYLIST_REGEX = re.compile(r"^(https?://)?(www\.)?youtube\.com/playlist\?list=[\w\-]+")
 
 ALLOWED_FORMATS = {"mp4", "webm", "mp3"}
-ALLOWED_QUALITIES = {"360p", "480p", "720p", "1080p", "1440p", "2160p", "audio"}
-
 
 class UserCreate(BaseModel):
     email:str
@@ -52,14 +52,6 @@ class DownloadRequest(BaseModel):
         value = value.lower()
         if value not in ALLOWED_FORMATS:
             raise ValueError(f"Invalid format. Allowed formats: {ALLOWED_FORMATS}")
-        return value
-
-    @field_validator("quality")
-    @classmethod
-    def validate_quality(cls, value):
-        value = value.lower()
-        if value not in ALLOWED_QUALITIES:
-            raise ValueError(f"Invalid quality. Allowed: {ALLOWED_QUALITIES}")
         return value
 
 class VideoMetadataResponse(BaseModel):
