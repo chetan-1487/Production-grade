@@ -206,7 +206,7 @@ uvicorn app.main:app --reload
 For download processing and handling long-running tasks, **Celery** with **Redis** is used. To start Celery, run:
 
 ```bash
-celery -A app.Core.celery_worker.celery_worker.celery_app worker --loglevel=info
+celery -A app.tasks worker --loglevel=info
 ```
 
 ---
