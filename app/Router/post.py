@@ -80,43 +80,88 @@ async def download(request: DownloadRequest, db: Session = Depends(get_db),curre
 
     try:
         result = task_result.get(timeout=99999999999)
-        filepath, metadata_dict = result
+        if not isinstance(result, list):
+            result = [result]  # wrap single video result in a list
+        # filepath, metadata_dict = result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error downloading video: {str(e)}")
+    
+    if not result:
+        raise HTTPException(status_code=400, detail="Download failed")
+    
+    responses=[]
 
-    if not filepath:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Download failed")
+    # if not filepath:
+    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Download failed")
 
-    # Store metadata in DB
-    metadata = VideoMetadata(**metadata_dict)
-    metadata.user_id=current_user.id
-    db.add(metadata)
-    db.commit()
-    db.refresh(metadata)
+    # # Store metadata in DB
+    # metadata = VideoMetadata(**metadata_dict)
+    # metadata.user_id=current_user.id
+    # db.add(metadata)
+    # db.commit()
+    # db.refresh(metadata)
 
-    # print(current_user)
+    # # print(current_user)
 
-    # Store metadata in DownloadHistory
-    history = DownloadHistory(
-        url=request.url,
-        video_id=metadata_dict["id"],
-        status="Success",
-        download_at=datetime.utcnow(),
-        download_url=filepath
-    )
-    history.user_id=current_user.id
-    db.add(history)
-    db.commit()
-    db.refresh(history)
+    # # Store metadata in DownloadHistory
+    # history = DownloadHistory(
+    #     url=request.url,
+    #     video_id=metadata_dict["id"],
+    #     status="Success",
+    #     download_at=datetime.utcnow(),
+    #     download_url=filepath
+    # )
+    # history.user_id=current_user.id
+    # db.add(history)
+    # db.commit()
+    # db.refresh(history)
 
-    return{
-        "Status":"Success",
-        "filepath": filepath,
-        "title": metadata.title,
-        "duration": metadata.duration,
-        "views": metadata.views,
-        "likes": metadata.likes,
-        "channel": metadata.channel,
-        "thumbnail_url": metadata.thumbnail_url,
-        "published_date": metadata.published_date
-    }
+    # return{
+    #     "Status":"Success",
+    #     "filepath": filepath,
+    #     "title": metadata.title,
+    #     "duration": metadata.duration,
+    #     "views": metadata.views,
+    #     "likes": metadata.likes,
+    #     "channel": metadata.channel,
+    #     "thumbnail_url": metadata.thumbnail_url,
+    #     "published_date": metadata.published_date
+    # }
+
+    for filepath, metadata_dict in result:
+        if not filepath:
+            continue
+
+        # Store metadata in DB
+        metadata = VideoMetadata(**metadata_dict)
+        metadata.user_id = current_user.id
+        db.add(metadata)
+        db.commit()
+        db.refresh(metadata)
+
+        # Store download history
+        history = DownloadHistory(
+            url=request.url,
+            video_id=metadata_dict["id"],
+            status="Success",
+            download_at=datetime.utcnow(),
+            download_url=filepath,
+            user_id=current_user.id
+        )
+        db.add(history)
+        db.commit()
+        db.refresh(history)
+
+        responses.append({
+            "Status": "Success",
+            "filepath": filepath,
+            "title": metadata.title,
+            "duration": metadata.duration,
+            "views": metadata.views,
+            "likes": metadata.likes,
+            "channel": metadata.channel,
+            "thumbnail_url": metadata.thumbnail_url,
+            "published_date": metadata.published_date
+        })
+
+    return {"downloaded_videos": responses}

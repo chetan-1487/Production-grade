@@ -12,7 +12,7 @@ QUALITY_MAP = {
     "480p": 480,
     "720p": 720,
     "1080p": 1080,
-    "4K": 2160
+    "4k": 2160
 }
 
 
@@ -28,10 +28,11 @@ if not in list:
 '''
 
 @celery_app.task(name="app.Core.Service.download.download_video")
-def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -> tuple:
-    video_id = str(uuid.uuid4())
+def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -> list:  #tuple
+    # video_id = str(uuid.uuid4())
     extension = "mp3" if file_format == "mp3" else file_format
-    output_path = os.path.join(BASE_DOWNLOAD_DIR, f"{video_id}.%(ext)s")
+    output_path = os.path.join(BASE_DOWNLOAD_DIR, f"%(id)s.%(ext)s")
+    result=[]
 
     if file_format == 'mp3':
         ydl_opts = {
@@ -44,6 +45,8 @@ def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -
             }],
             'noplaylist': False,
             'quiet': True,
+            'playlistend': 5,
+            'match_filter': ('duration <= 18000 && (filesize <= 3221225472 || filesize_approx <= 3221225472)'),
         }
     else:
         if quality not in QUALITY_MAP:
@@ -62,29 +65,52 @@ def download_video(url: str, quality: str = '1080p', file_format: str = 'mp4') -
             'merge_output_format': file_format,
             'noplaylist': False,
             'quiet': True,
+            'playlistend': 5,
+            'match_filter': ('duration <= 18000 && (filesize <= 3221225472 || filesize_approx <= 3221225472)'),
         }
 
     try:
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-
+            
             if not info:
                 raise RuntimeError("Failed to extract video information.")
+            entries=info.get("entries",[])
+            if not entries:
+                entries=[info]
+            
+            for entry in entries:
+                video_id = str(uuid.uuid4())
+                file_path = os.path.join(BASE_DOWNLOAD_DIR, f"{video_id}.{extension}")
 
-        filepath = os.path.expanduser(f"~/Downloads/{video_id}.{extension}")
+                metadata = {
+                    "id": video_id,
+                    "title": entry.get("title"),
+                    "duration": format_duration(entry.get("duration", 0)),
+                    "views": entry.get("view_count", 0),
+                    "likes": entry.get("like_count", 0),
+                    "channel": entry.get("uploader"),
+                    "thumbnail_url": entry.get("thumbnail"),
+                    "published_date": datetime.strptime(entry.get("upload_date", "19700101"), "%Y%m%d").date()
+                }
+
+                result.append((file_path, metadata))
+
+        # filepath = os.path.expanduser(f"~/Downloads/{video_id}.{extension}")
        
-        metadata = {
-            "id": video_id,
-            "title": info.get("title"),
-            "duration": format_duration(info.get("duration", 0)),
-            "views": info.get("view_count", 0),
-            "likes": info.get("like_count", 0),
-            "channel": info.get("uploader"),
-            "thumbnail_url": info.get("thumbnail"),
-            "published_date": datetime.strptime(info.get("upload_date", "19700101"), "%Y%m%d").date()
-        }
+        # metadata = {
+        #     "id": video_id,
+        #     "title": info.get("title"),
+        #     "duration": format_duration(info.get("duration", 0)),
+        #     "views": info.get("view_count", 0),
+        #     "likes": info.get("like_count", 0),
+        #     "channel": info.get("uploader"),
+        #     "thumbnail_url": info.get("thumbnail"),
+        #     "published_date": datetime.strptime(info.get("upload_date", "19700101"), "%Y%m%d").date()
+        # }
 
-        return filepath, metadata
+        # return filepath, metadata
+        return result
     except Exception as e:
         raise RuntimeError(f"Download failed: {str(e)}")
 
